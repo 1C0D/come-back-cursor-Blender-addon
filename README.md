@@ -1,9 +1,6 @@
 # come-back-cursor
 
-Addon for text editor  
+Addon to be sure to stay in the text_editor area when typing
 
-an icon in the header to activate it, alt to stop it  
-it will prevent the cursor to go out from the text editor alone  
-good boy
-
-it is installing a module and I get a good result with PIP on 2.92 not 2.91 
+A state icon in the header, toggle it with Shift+RightMouse   (or esc to swith off)     
+From addon preferences, you can choose limit sides. enable 2 max  
