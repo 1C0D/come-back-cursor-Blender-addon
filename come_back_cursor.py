@@ -12,7 +12,6 @@ bl_info = {
 """
 Use shortcut shift+Right Mouse to toggle the operator. the icon in the header is more like an indicator. don't activate more than 2 limits by default down and right are True (see in addon preferences). if you need other corners uncomment lines
 
-this is not hyper sensitive but if you let the mouse not far from the border it will automatically get back in. 
 """
 
 import bpy
