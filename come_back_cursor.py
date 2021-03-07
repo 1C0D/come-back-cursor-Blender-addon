@@ -1,8 +1,8 @@
 bl_info = {
     "name": "come back cursor",
     "author": "1C0D",
-    "version": (1, 0, 0),
-    "blender": (2, 92, 0),
+    "version": (1, 1, 0),
+    "blender": (2, 90, 0),
     "location": "Text Editor > only > Text editor",
     "description": "stay home cursor",
     "wiki_url": "",
@@ -10,21 +10,12 @@ bl_info = {
 }
 
 """
-Assign a shortcut from the search menu. stop with alt (or esc). if you need other corners uncomment lines
+Use shortcut shift+Right Mouse to toggle the operator. the icon in the header is more like an indicator. don't activate more than 2 limits by default down and right are True (see in addon preferences). if you need other corners uncomment lines
 
 this is not hyper sensitive but if you let the mouse not far from the border it will automatically get back in. 
 """
 
-#to improve: if in stop calculation
-
 import bpy
-
-try:
-    import pyautogui
-except ImportError:
-    pybin = bpy.app.binary_path_python
-    subprocess.check_call([pybin, '-m', 'pip', 'install', 'pyautogui']) #win
-    import pycodestyle
 
 class COME_back_cursor(bpy.types.Operator):
     """Get back cursor in the right place"""
@@ -33,25 +24,27 @@ class COME_back_cursor(bpy.types.Operator):
 
     def modal(self, context, event):
 
-        def get_3d_area_region():
-            for window in bpy.context.window_manager.windows:
-                for area in window.screen.areas:
-                    if area.type == 'TEXT_EDITOR':
-                        return area
+        preferences = bpy.context.preferences
+        addon_prefs = preferences.addons[__name__].preferences
+        region=context.region
 
-        area = get_3d_area_region()       
-        if event.mouse_region_y <= 5:    #bottom
-            pyautogui.moveRel(0, -8)  # 8 pixels up
-#        if event.mouse_region_y >= area.height+15:   #top 
-#            pyautogui.moveRel(0, 8)  # 8 pixels down            
-#        if event.mouse_region_x <= 5:  
-#            pyautogui.moveRel(8, 0)  # 8 pix right
-        if event.mouse_region_x >= area.width-5:   
-            pyautogui.moveRel(-8, 0)  # 8 pix left
-        
-        if event.type == 'ESC' or event.alt:
+        if context.area.type=='TEXT_EDITOR':
+            if addon_prefs.y_min and event.mouse_region_y <= 10:    #bottom
+                context.window.cursor_warp(event.mouse_x,region.y+event.mouse_region_y+1)
+
+            if addon_prefs.y_max and event.mouse_region_y >= (region.height-10):   #top 
+                context.window.cursor_warp(event.mouse_x,region.y+event.mouse_region_y-1)
+
+            if addon_prefs.x_min and event.mouse_region_x <= 30:  
+                context.window.cursor_warp(region.x+event.mouse_x+1,event.mouse_y)
+
+            if addon_prefs.x_max and event.mouse_region_x >= context.area.width-1:  #if side panel 
+                context.window.cursor_warp(region.x+event.mouse_x-1,event.mouse_y) 
+
+        if event.type == 'ESC' or not context.scene.toggle_cbc:
+            context.scene.toggle_cbc = False
             return {'FINISHED'}
-        
+
         else:
             return {'PASS_THROUGH'}
 
@@ -59,28 +52,82 @@ class COME_back_cursor(bpy.types.Operator):
 
 
     def invoke(self, context, event):
-        
+
         context.window_manager.modal_handler_add(self)
         return {'RUNNING_MODAL'}
 
-def draw(self, context):
-    layout = self.layout
-    
-    layout.operator("text.come_back",text='', icon="VIS_SEL_11")
+    @classmethod
+    def _setup(cls):
+        cls._keymaps = []
+        kc = bpy.context.window_manager.keyconfigs.addon.keymaps
+        get, new = kc.get, kc.new
+        km = get('Text', new(name='Text', space_type='TEXT_EDITOR'))
 
+        new = km.keymap_items.new
+        wm = bpy.context.window_manager
+        kmi = new("wm.context_toggle", 'RIGHTMOUSE', 'PRESS', shift=1)
+        kmi.properties.data_path = "scene.toggle_cbc"
+        cls._keymaps.append((km, kmi))
+
+    @classmethod
+    def _remove(cls):
+        for km, kmi in cls._keymaps:
+            km.keymap_items.remove(kmi)
+        cls._keymaps.clear()
+    
+class COME_PT_back_cursor(bpy.types.AddonPreferences):
+    bl_idname = __name__
+
+    y_min: bpy.props.BoolProperty(
+            name="enable y min",
+            default=True,
+            )
+    y_max: bpy.props.BoolProperty(
+            name="enable y max",
+            default=False,
+            )            
+    x_min: bpy.props.BoolProperty(
+            name="enable x min",
+            default=False,
+            )
+    x_max: bpy.props.BoolProperty(
+            name="enable x max",
+            default=True,
+            )
+            
+    def draw(self, context):
+        layout = self.layout
+        layout.prop(self, "y_min")
+        layout.prop(self, "y_max")
+        layout.prop(self, "x_min")
+        layout.prop(self, "x_max")   
+        
+
+def update_toggle_cbc(self, context):
+    
+    print("state0", context.scene.toggle_cbc)
+    if context.scene.toggle_cbc: 
+        bpy.ops.text.come_back('INVOKE_DEFAULT')        
+        print("state1", context.scene.toggle_cbc)
+
+def draw(self, context):
+    
+    layout = self.layout    
+    layout.prop(context.scene, "toggle_cbc",text='', icon="VIS_SEL_11", toggle=False)
 
 def register():
     bpy.utils.register_class(COME_back_cursor)
+    COME_back_cursor._setup()   
+    bpy.utils.register_class(COME_PT_back_cursor)
     bpy.types.TEXT_HT_header.prepend(draw)
-
+    bpy.types.Scene.toggle_cbc = bpy.props.BoolProperty(update=update_toggle_cbc,default=True)
 
 def unregister():
-    bpy.utils.unregister_class(COME_back_cursor)
     bpy.types.TEXT_HT_header.remove(draw)
-
+    bpy.utils.unregister_class(COME_PT_back_cursor)
+    bpy.utils.unregister_class(COME_back_cursor)
+    COME_back_cursor._remove()
+    del bpy.types.Scene.toggle_cbc
 
 if __name__ == "__main__":
     register()
-
-#    # test call
-#    bpy.ops.object.modal_operator('INVOKE_DEFAULT')
