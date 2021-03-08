@@ -1,7 +1,7 @@
 bl_info = {
     "name": "come back cursor",
     "author": "1C0D",
-    "version": (1, 1, 0),
+    "version": (1, 1, 1),
     "blender": (2, 90, 0),
     "location": "Text Editor > only > Text editor",
     "description": "stay home cursor",
@@ -119,7 +119,7 @@ def register():
     COME_back_cursor._setup()   
     bpy.utils.register_class(COME_PT_back_cursor)
     bpy.types.TEXT_HT_header.prepend(draw)
-    bpy.types.Scene.toggle_cbc = bpy.props.BoolProperty(update=update_toggle_cbc,default=True)
+    bpy.types.Scene.toggle_cbc = bpy.props.BoolProperty(update=update_toggle_cbc,default=False)
 
 def unregister():
     bpy.types.TEXT_HT_header.remove(draw)
